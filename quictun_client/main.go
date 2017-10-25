@@ -20,9 +20,24 @@ var session quic.Session
 var mu sync.RWMutex
 var g singleflight.Group
 
+var retryCodes = []qerr.ErrorCode{
+	qerr.PublicReset,
+	qerr.NetworkIdleTimeout,
+	qerr.HandshakeTimeout,
+}
+
+func shouldRetry(err error) bool {
+	err2 := qerr.ToQuicError(err)
+	for _, v := range retryCodes {
+		if v == err2.ErrorCode {
+			return true
+		}
+	}
+	return false
+}
+
 func resetSession() quic.Session {
 	log.Printf("connect to %v\n", flagTarget)
-
 	sess, err := quic.DialAddr(flagTarget, config, nil)
 	if err != nil {
 		log.Printf("quic dial failed: %v\n", err)
@@ -39,35 +54,26 @@ func resetSession() quic.Session {
 }
 
 func dial() (net.Conn, error) {
-	mu.RLock()
-	sess := session
-	mu.RUnlock()
+	maxTries := 2
+	for i := 0; i < maxTries; i++ {
+		mu.RLock()
+		sess := session
+		mu.RUnlock()
 
-	stream, err := sess.OpenStreamSync()
-	if err == nil {
-		return quictun.NewStreamConn(sess, stream), nil
-	}
-
-	err2 := qerr.ToQuicError(err)
-	if err2.ErrorCode != qerr.PublicReset &&
-		err2.ErrorCode != qerr.NetworkIdleTimeout {
+		stream, err := sess.OpenStreamSync()
+		if err == nil {
+			log.Printf("stream opened %v\n", stream.StreamID())
+			return quictun.NewStreamConn(sess, stream), nil
+		}
 		log.Printf("open stream failed: %v", err)
-		return nil, err
+		if !shouldRetry(err) || i+1 == maxTries {
+			return nil, err
+		}
+		g.Do("reset", func() (interface{}, error) {
+			return resetSession(), nil
+		})
 	}
-
-	res, _ := g.Do("reset", func() (interface{}, error) {
-		return resetSession(), nil
-	})
-	if res == nil {
-		return nil, err
-	}
-
-	sess = res.(quic.Session)
-	stream, err = sess.OpenStreamSync()
-	if err != nil {
-		return nil, err
-	}
-	return quictun.NewStreamConn(sess, stream), nil
+	panic("bug")
 }
 
 func main() {
