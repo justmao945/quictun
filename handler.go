@@ -48,8 +48,8 @@ func HandleConn(conn net.Conn, targetAddr string, dialer DialFunc) {
 	start := time.Now()
 	// browser is greedy
 	deadline := start.Add(30 * time.Second)
-	dst.SetDeadline(deadline)
-	src.SetDeadline(deadline)
+	conn.SetDeadline(deadline)
+	targetConn.SetDeadline(deadline)
 
 	stod := make(chan int64)
 	go copyAndWait(targetConn, conn, stod)
