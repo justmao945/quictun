@@ -42,14 +42,14 @@ func HandleConn(conn net.Conn, targetAddr string, dialer DialFunc) {
 		if err != nil {
 			log.Printf("Copy: %s\n", err.Error())
 		}
-		// src is closed, should close dst, also set src write deadline
-		t := time.Now().Add(10 * time.Second)
-		dst.SetDeadline(t)
-		src.SetDeadline(t)
 		c <- n
 	}
 
 	start := time.Now()
+	// browser is greedy
+	deadline := start.Add(30 * time.Second)
+	dst.SetDeadline(deadline)
+	src.SetDeadline(deadline)
 
 	stod := make(chan int64)
 	go copyAndWait(targetConn, conn, stod)
