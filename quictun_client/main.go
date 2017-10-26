@@ -59,7 +59,10 @@ func dial() (net.Conn, error) {
 		mu.RLock()
 		sess := session
 		mu.RUnlock()
-
+		if sess == nil {
+			resetSession()
+			continue
+		}
 		stream, err := sess.OpenStreamSync()
 		if err == nil {
 			log.Printf("stream opened %v\n", stream.StreamID())
