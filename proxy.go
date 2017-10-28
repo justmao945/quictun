@@ -39,11 +39,16 @@ func Proxy(conn, targetConn net.Conn) {
 	dtos := make(chan int64)
 	go copyAndWait(conn, targetConn, dtos)
 
-	// Generally, the remote server would keep the connection alive,
-	// so we will not close the connection until both connection recv
-	// EOF and are done!
-	nstod, ndtos := <-stod, <-dtos
-	d := time.Since(start)
-	log.Printf("close link %v <-> %v after %v | sent %vB | recv %vB\n",
-		conn.RemoteAddr(), targetConn.RemoteAddr(), d, nstod, ndtos)
+	var nstod, ndtos int64
+	for i := 0; i < 2; {
+		select {
+		case nstod = <-stod:
+			i++
+		case ndtos = <-dtos:
+			i++
+		}
+	}
+	d := BeautifyDuration(time.Since(start))
+	log.Printf("CLOSE %s after %s ->%s <-%s\n",
+		targetConn.RemoteAddr(), d, BeautifySize(nstod), BeautifySize(ndtos))
 }
