@@ -13,3 +13,5 @@ quictun_server -addr :1443 -cert server.cert -key server.key -target 127.0.0.1:8
 ```
 tlstun_client -addr :1083 -target quictun-server-domain.com:1443
 ```
+# TODO
+* client & server auth
