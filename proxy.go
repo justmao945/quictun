@@ -13,7 +13,7 @@ type closeWriter interface {
 	CloseWrite() error
 }
 
-var linkId, count int64
+var linkIdSeed, linkCount int64
 
 var bufPool = sync.Pool{
 	New: func() interface{} {
@@ -24,13 +24,13 @@ var bufPool = sync.Pool{
 func Proxy(conn, targetConn net.Conn) {
 	defer conn.Close()
 	defer targetConn.Close()
-	defer atomic.AddInt64(&count, -1)
+	defer atomic.AddInt64(&linkCount, -1)
 
-	atomic.AddInt64(&count, 1)
-	atomic.AddInt64(&linkId, 1)
+	atomic.AddInt64(&linkCount, 1)
+	linkId := atomic.AddInt64(&linkIdSeed, 1)
 
 	log.Printf("[%d] START link [%#x] %v <-> %v\n",
-		atomic.LoadInt64(&count), atomic.LoadInt64(&linkId),
+		atomic.LoadInt64(&linkCount), linkId,
 		conn.RemoteAddr(), targetConn.RemoteAddr())
 
 	copyAndWait := func(dst, src net.Conn, c chan int64) {
@@ -67,5 +67,5 @@ func Proxy(conn, targetConn net.Conn) {
 	}
 	d := BeautifyDuration(time.Since(start))
 	log.Printf("CLOSE link [%#x] after %s ->%s <-%s\n",
-		atomic.LoadInt64(&linkId), d, BeautifySize(nstod), BeautifySize(ndtos))
+		linkId, d, BeautifySize(nstod), BeautifySize(ndtos))
 }
