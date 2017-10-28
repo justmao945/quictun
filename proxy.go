@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
@@ -11,11 +12,17 @@ type closeWriter interface {
 	CloseWrite() error
 }
 
+var count int64
+
 func Proxy(conn, targetConn net.Conn) {
 	defer conn.Close()
 	defer targetConn.Close()
+	defer atomic.AddInt64(&count, -1)
 
-	log.Printf("link start %v <-> %v", conn.RemoteAddr(), targetConn.RemoteAddr())
+	atomic.AddInt64(&count, 1)
+
+	log.Printf("[%d] link start %v <-> %v",
+		atomic.LoadInt64(&count), conn.RemoteAddr(), targetConn.RemoteAddr())
 
 	copyAndWait := func(dst, src net.Conn, c chan int64) {
 		buf := make([]byte, 1024)
