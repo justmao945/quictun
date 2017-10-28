@@ -15,3 +15,4 @@ tlstun_client -addr :1083 -target quictun-server-domain.com:1443
 ```
 # TODO
 * client & server auth
+* optimize bandwdith (compare with KCPTUN)
