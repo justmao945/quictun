@@ -13,6 +13,7 @@ import (
 func handleStream(conn net.Conn, targetAddr string) {
 	targetConn, err := net.Dial("tcp", targetAddr)
 	if err != nil {
+		conn.Close()
 		log.Printf("dial failed: %v\n", err)
 		return
 	}

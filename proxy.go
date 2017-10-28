@@ -14,7 +14,7 @@ type closeWriter interface {
 func Proxy(conn, targetConn net.Conn) {
 	defer conn.Close()
 	defer targetConn.Close()
-	
+
 	log.Printf("link start %v <-> %v", conn.RemoteAddr(), targetConn.RemoteAddr())
 
 	copyAndWait := func(dst, src net.Conn, c chan int64) {
@@ -25,12 +25,14 @@ func Proxy(conn, targetConn net.Conn) {
 		}
 		if tcpConn, ok := dst.(closeWriter); ok {
 			tcpConn.CloseWrite()
+		} else {
+			dst.SetReadDeadline(time.Now().Add(time.Second))
 		}
 		c <- n
 	}
 
 	start := time.Now()
-	
+
 	stod := make(chan int64)
 	go copyAndWait(targetConn, conn, stod)
 
