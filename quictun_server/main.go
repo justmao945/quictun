@@ -6,16 +6,22 @@ import (
 	"github.com/justmao945/quictun"
 	quic "github.com/lucas-clemente/quic-go"
 	"log"
+	"net"
+	"time"
 )
 
-func HandleSession(session quic.Session, targetAddr string) {
-	defer func() {
-		err := session.Close(nil)
-		if err != nil {
-			log.Printf("close source session %v fialed: %v\n", session.RemoteAddr(), err)
-		}
-	}()
+func handleStream(conn net.Conn, targetAddr string) {
+	targetConn, err := net.Dial("tcp", targetAddr)
+	if err != nil {
+		log.Printf("dial failed: %v\n", err)
+		return
+	}
+	// proxy will close conns when done
+	go quictun.Proxy(conn, targetConn)
+}
 
+func handleSession(session quic.Session, targetAddr string) {
+	defer session.Close(nil)
 	for {
 		stream, err := session.AcceptStream()
 		if err != nil {
@@ -23,7 +29,7 @@ func HandleSession(session quic.Session, targetAddr string) {
 			break
 		}
 		conn := quictun.NewStreamConn(session, stream)
-		go quictun.HandleConn(conn, targetAddr, nil)
+		go handleStream(conn, targetAddr)
 	}
 }
 
@@ -53,9 +59,13 @@ func main() {
 	for {
 		session, err := listener.Accept()
 		if err != nil {
-			log.Printf("accpet failed: %v\n", err)
-			continue
+			log.Printf("accept failed: %v\n", err)
+			if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+				time.Sleep(10 * time.Millisecond)
+				continue
+			}
+			return // fatal error, stop
 		}
-		go HandleSession(session, flagTarget)
+		go handleSession(session, flagTarget)
 	}
 }
