@@ -12,7 +12,7 @@ type closeWriter interface {
 	CloseWrite() error
 }
 
-var count int64
+var linkId, count int64
 
 func Proxy(conn, targetConn net.Conn) {
 	defer conn.Close()
@@ -20,9 +20,11 @@ func Proxy(conn, targetConn net.Conn) {
 	defer atomic.AddInt64(&count, -1)
 
 	atomic.AddInt64(&count, 1)
+	atomic.AddInt64(&linkId, 1)
 
-	log.Printf("[%d] link start %v <-> %v",
-		atomic.LoadInt64(&count), conn.RemoteAddr(), targetConn.RemoteAddr())
+	log.Printf("[%d] START link [%#x] %v <-> %v\n",
+		atomic.LoadInt64(&count), atomic.LoadInt64(&linkId),
+		conn.RemoteAddr(), targetConn.RemoteAddr())
 
 	copyAndWait := func(dst, src net.Conn, c chan int64) {
 		buf := make([]byte, 1024)
@@ -56,6 +58,6 @@ func Proxy(conn, targetConn net.Conn) {
 		}
 	}
 	d := BeautifyDuration(time.Since(start))
-	log.Printf("CLOSE %s after %s ->%s <-%s\n",
-		targetConn.RemoteAddr(), d, BeautifySize(nstod), BeautifySize(ndtos))
+	log.Printf("CLOSE link [%#x] after %s ->%s <-%s\n",
+		atomic.LoadInt64(&linkId), d, BeautifySize(nstod), BeautifySize(ndtos))
 }
