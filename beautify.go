@@ -7,7 +7,7 @@ import (
 
 // Duration to e.g. 432ms or 12s, human readable translation
 func BeautifyDuration(d time.Duration) string {
-	u, ms, s := uint64(d), uint64(time.Millisecond), uint64(time.Second)
+	u, ms, s, m := uint64(d), uint64(time.Millisecond), uint64(time.Second), uint64(time.Minute)
 	if d < 0 {
 		u = -u
 	}
@@ -16,8 +16,10 @@ func BeautifyDuration(d time.Duration) string {
 		return "0"
 	case u < s:
 		return strconv.FormatUint(u/ms, 10) + "ms"
-	default:
+	case u < m:
 		return strconv.FormatUint(u/s, 10) + "s"
+	default:
+		return strconv.FormatUint(u/m, 10) + "m"
 	}
 }
 
