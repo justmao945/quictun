@@ -1,4 +1,4 @@
-# tlstun
+# quictun
 QUIC tunnel
 
 # get free TLS certificates
@@ -11,7 +11,7 @@ quictun_server -addr :1443 -cert server.cert -key server.key -target 127.0.0.1:8
 
 # start client on local machine with domain
 ```
-tlstun_client -addr :1083 -target quictun-server-domain.com:1443
+quictun_client -addr :1083 -target quictun-server-domain.com:1443
 ```
 # TODO
 * client & server auth
