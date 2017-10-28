@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -13,6 +14,12 @@ type closeWriter interface {
 }
 
 var linkId, count int64
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 1024)
+	},
+}
 
 func Proxy(conn, targetConn net.Conn) {
 	defer conn.Close()
@@ -27,8 +34,9 @@ func Proxy(conn, targetConn net.Conn) {
 		conn.RemoteAddr(), targetConn.RemoteAddr())
 
 	copyAndWait := func(dst, src net.Conn, c chan int64) {
-		buf := make([]byte, 1024)
+		buf := bufPool.Get().([]byte)
 		n, err := io.CopyBuffer(dst, src, buf)
+		bufPool.Put(buf)
 		if err != nil {
 			log.Printf("Copy: %s\n", err.Error())
 		}
