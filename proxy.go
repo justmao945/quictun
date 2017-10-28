@@ -33,7 +33,7 @@ func Proxy(conn, targetConn net.Conn) {
 		if tcpConn, ok := dst.(closeWriter); ok {
 			tcpConn.CloseWrite()
 		} else {
-			dst.SetReadDeadline(time.Now().Add(time.Second))
+			dst.Close()
 		}
 		c <- n
 	}
